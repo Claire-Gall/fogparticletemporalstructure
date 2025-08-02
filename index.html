@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>D3 Vertical Path with Light Beam</title>
+  <style>
+    body {
+      background-color: #f0f8ff;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+
+    #chart {
+      border: 1px solid #ccc;
+      background-color: #fff;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      padding: 10px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .glow {
+      filter: url(#glow-filter);
+    }
+  </style>
+</head>
+<body>
+
+  <h2 style="text-align:center;">D3 Vertical Animated Paths with Light Beams</h2>
+  <div id="chart"></div>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script>
+    const width = 800;
+    const height = 500;
+    const margin = { top: 20, right: 20, bottom: 30, left: 40 };
+
+    const svg = d3.select("#chart")
+      .append("svg")
+      .attr("width", width)
+      .attr("height", height);
+
+    // Add defs for glow filter
+    const defs = svg.append("defs");
+
+    defs.append("filter")
+      .attr("id", "glow-filter")
+      .append("feGaussianBlur")
+      .attr("stdDeviation", 8)
+      .attr("result", "coloredBlur");
+
+    defs.select("filter")
+      .append("feMerge")
+      .selectAll("feMergeNode")
+      .data(["coloredBlur", "SourceGraphic"])
+      .enter()
+      .append("feMergeNode")
+      .attr("in", d => d);
+
+    const x = d3.scaleLinear().domain([0, 800]).range([margin.left, width - margin.right]);
+    const y = d3.scaleLinear().domain([0, 500]).range([margin.top, height - margin.bottom]);
+
+    // Axes
+    svg.append("g")
+      .attr("transform", `translate(0,${height - margin.bottom})`)
+      .call(d3.axisBottom(x));
+
+    svg.append("g")
+      .attr("transform", `translate(${margin.left},0)`)
+      .call(d3.axisLeft(y));
+
+    const colors = ["grey", "grey", "grey", "grey", "grey"];
+
+    const paths = Array.from({ length: 5 }, (_, i) => {
+      const xPos = 100 + i * 120;
+      return {
+        name: `Line ${i + 1}`,
+        color: colors[i % colors.length],
+        delay: i * 500,
+        coordinates: [
+          [xPos, 0],
+          [xPos + (Math.random() * 20 - 10), 100],
+          [xPos + (Math.random() * 20 - 10), 200],
+          [xPos + (Math.random() * 20 - 10), 300],
+          [xPos + (Math.random() * 20 - 10), 400],
+          [xPos + (Math.random() * 20 - 10), 500]
+        ]
+      };
+    });
+
+    const line = d3.line()
+      .x(d => x(d[0]))
+      .y(d => y(d[1]));
+
+    paths.forEach(pathData => {
+      svg.append("path")
+        .datum(pathData.coordinates)
+        .attr("d", line)
+        .attr("fill", "none")
+        .attr("stroke", pathData.color)
+        .attr("stroke-width", 2)
+        .attr("class", `path-${pathData.name.replace(/\s/g, "")}`);
+
+      const path = svg.select(`.path-${pathData.name.replace(/\s/g, "")}`).node();
+      const totalLength = path.getTotalLength();
+
+      // Glowing circle (beam effect)
+      const glow = svg.append("circle")
+        .attr("r", 12)
+        .attr("fill", pathData.color)
+        .attr("class", "glow")
+        .style("opacity", 0.3);
+
+      // Moving circle
+      const circle = svg.append("circle")
+        .attr("r", 5)
+        .attr("fill", pathData.color)
+        .attr("stroke", "black");
+
+      function animate() {
+        const duration = 4000;
+        glow.transition()
+          .delay(pathData.delay)
+          .duration(duration)
+          .ease(d3.easeLinear)
+          .attrTween("transform", () => {
+            return t => {
+              const point = path.getPointAtLength(t * totalLength);
+              return `translate(${point.x},${point.y})`;
+            };
+          })
+          .on("end", animate);
+
+        circle.transition()
+          .delay(pathData.delay)
+          .duration(duration)
+          .ease(d3.easeLinear)
+          .attrTween("transform", () => {
+            return t => {
+              const point = path.getPointAtLength(t * totalLength);
+              return `translate(${point.x},${point.y})`;
+            };
+          });
+      }
+
+      animate();
+    });
+  </script>
+</body>
+</html>
