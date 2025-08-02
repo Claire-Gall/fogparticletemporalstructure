@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>D3 Vertical Path with Light Beam</title>
+  <title>Fog Paths</title>
   <style>
     body {
       background-color: #f0f8ff;
@@ -12,28 +12,34 @@
     }
 
     #chart {
-      border: 1px solid #ccc;
       background-color: #fff;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
       padding: 10px;
-      max-width: 800px;
+      max-width: 1200px;
       margin: 0 auto;
     }
 
     .glow {
       filter: url(#glow-filter);
     }
+
+    .trail {
+      fill: none;
+      stroke: grey;
+      stroke-width: 1;
+      stroke-linecap: round;
+      opacity: 0.5;
+    }
   </style>
 </head>
 <body>
 
-  <h2 style="text-align:center;">D3 Vertical Animated Paths with Light Beams</h2>
+  <h2 style="text-align:center;">Fog Particle Paths</h2>
   <div id="chart"></div>
 
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script>
-    const width = 800;
-    const height = 500;
+    const width = 1200;
+    const height = 600;
     const margin = { top: 20, right: 20, bottom: 30, left: 40 };
 
     const svg = d3.select("#chart")
@@ -41,107 +47,122 @@
       .attr("width", width)
       .attr("height", height);
 
-    // Add defs for glow filter
+    // Glow filter
     const defs = svg.append("defs");
+    const glowFilter = defs.append("filter").attr("id", "glow-filter");
+    glowFilter.append("feGaussianBlur").attr("stdDeviation", 6).attr("result", "blur");
+    const feMerge = glowFilter.append("feMerge");
+    feMerge.append("feMergeNode").attr("in", "blur");
+    feMerge.append("feMergeNode").attr("in", "SourceGraphic");
 
-    defs.append("filter")
-      .attr("id", "glow-filter")
-      .append("feGaussianBlur")
-      .attr("stdDeviation", 8)
-      .attr("result", "coloredBlur");
+    const x = d3.scaleLinear().domain([0, 100]).range([margin.left, width - margin.right]);
+    const y = d3.scaleLinear().domain([0, height]).range([margin.top, height - margin.bottom]);
 
-    defs.select("filter")
-      .append("feMerge")
-      .selectAll("feMergeNode")
-      .data(["coloredBlur", "SourceGraphic"])
-      .enter()
-      .append("feMergeNode")
-      .attr("in", d => d);
-
-    const x = d3.scaleLinear().domain([0, 800]).range([margin.left, width - margin.right]);
-    const y = d3.scaleLinear().domain([0, 500]).range([margin.top, height - margin.bottom]);
-
-    // Axes
-    svg.append("g")
-      .attr("transform", `translate(0,${height - margin.bottom})`)
-      .call(d3.axisBottom(x));
-
-    svg.append("g")
-      .attr("transform", `translate(${margin.left},0)`)
-      .call(d3.axisLeft(y));
-
-    const colors = ["grey", "grey", "grey", "grey", "grey"];
-
-    const paths = Array.from({ length: 5 }, (_, i) => {
-      const xPos = 100 + i * 120;
+    // Generate 100 lines
+    const lineCount = 100;
+    const lines = Array.from({ length: lineCount }, (_, i) => {
+      const xPos = i;
+      const coordinates = [
+        [xPos, 0],
+        [xPos + (Math.random() * 2 - 1), 100],
+        [xPos + (Math.random() * 2 - 1), 200],
+        [xPos + (Math.random() * 2 - 1), 300],
+        [xPos + (Math.random() * 2 - 1), 400],
+        [xPos + (Math.random() * 2 - 1), 500],
+        [xPos + (Math.random() * 2 - 1), 600],
+      ];
       return {
-        name: `Line ${i + 1}`,
-        color: colors[i % colors.length],
-        delay: i * 500,
-        coordinates: [
-          [xPos, 0],
-          [xPos + (Math.random() * 20 - 10), 100],
-          [xPos + (Math.random() * 20 - 10), 200],
-          [xPos + (Math.random() * 20 - 10), 300],
-          [xPos + (Math.random() * 20 - 10), 400],
-          [xPos + (Math.random() * 20 - 10), 500]
-        ]
+        name: `Line${i}`,
+        coordinates,
+        delay: i * 20
       };
     });
 
-    const line = d3.line()
+    const lineGenerator = d3.line()
       .x(d => x(d[0]))
       .y(d => y(d[1]));
 
-    paths.forEach(pathData => {
-      svg.append("path")
-        .datum(pathData.coordinates)
-        .attr("d", line)
+    lines.forEach(lineData => {
+      const path = svg.append("path")
+        .datum(lineData.coordinates)
+        .attr("d", lineGenerator)
         .attr("fill", "none")
-        .attr("stroke", pathData.color)
-        .attr("stroke-width", 2)
-        .attr("class", `path-${pathData.name.replace(/\s/g, "")}`);
+        .attr("stroke", "grey")
+        .attr("stroke-width", 1)
+        .attr("class", `path-${lineData.name}`);
 
-      const path = svg.select(`.path-${pathData.name.replace(/\s/g, "")}`).node();
-      const totalLength = path.getTotalLength();
+      const pathNode = path.node();
+      const totalLength = pathNode.getTotalLength();
 
-      // Glowing circle (beam effect)
+      // Glow
       const glow = svg.append("circle")
-        .attr("r", 12)
-        .attr("fill", pathData.color)
+        .attr("r", 10)
+        .attr("fill", "grey")
         .attr("class", "glow")
         .style("opacity", 0.3);
 
-      // Moving circle
-      const circle = svg.append("circle")
-        .attr("r", 5)
-        .attr("fill", pathData.color)
-        .attr("stroke", "black");
+      // Main point
+      const point = svg.append("circle")
+        .attr("r", 3)
+        .attr("fill", "grey");
 
+      // Trail path
+      const trail = svg.append("path")
+        .attr("class", "trail");
+
+      // Animate
       function animate() {
         const duration = 4000;
-        glow.transition()
-          .delay(pathData.delay)
+
+        // Animate point and glow
+        point.transition()
+          .delay(lineData.delay)
           .duration(duration)
           .ease(d3.easeLinear)
-          .attrTween("transform", () => {
-            return t => {
-              const point = path.getPointAtLength(t * totalLength);
-              return `translate(${point.x},${point.y})`;
+          .attrTween("transform", function () {
+            return function (t) {
+              const pt = pathNode.getPointAtLength(t * totalLength);
+              return `translate(${pt.x},${pt.y})`;
+            };
+          });
+
+        glow.transition()
+          .delay(lineData.delay)
+          .duration(duration)
+          .ease(d3.easeLinear)
+          .attrTween("transform", function () {
+            return function (t) {
+              const pt = pathNode.getPointAtLength(t * totalLength);
+              return `translate(${pt.x},${pt.y})`;
+            };
+          });
+
+        // Animate trail
+        trail.transition()
+          .delay(lineData.delay)
+          .duration(duration)
+          .ease(d3.easeLinear)
+          .attrTween("d", function () {
+            return function (t) {
+              const subLength = t * totalLength;
+              const trailPath = pathNode.getPointAtLength
+                ? Array.from({ length: 30 }, (_, j) => {
+                    const l = subLength - j * 4;
+                    if (l < 0) return null;
+                    const pt = pathNode.getPointAtLength(l);
+                    return [pt.x, pt.y];
+                  }).filter(Boolean)
+                : [];
+
+              const trailLine = d3.line()
+                .x(d => d[0])
+                .y(d => d[1])
+                .curve(d3.curveBasis);
+
+              return trailLine(trailPath);
             };
           })
           .on("end", animate);
-
-        circle.transition()
-          .delay(pathData.delay)
-          .duration(duration)
-          .ease(d3.easeLinear)
-          .attrTween("transform", () => {
-            return t => {
-              const point = path.getPointAtLength(t * totalLength);
-              return `translate(${point.x},${point.y})`;
-            };
-          });
       }
 
       animate();
