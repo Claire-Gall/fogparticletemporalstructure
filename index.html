@@ -15,7 +15,8 @@
     #chart {
       background-color: #ffffff;
       padding: 10px;
-      max-width: 1200px;
+      max-width: 1600px;
+      max-height: 1200px;
       margin: 0 auto;
     }
 
@@ -39,9 +40,9 @@
 
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script>
-    const width = 1200;
-    const height = 600;
-    const margin = { top: 20, right: 20, bottom: 30, left: 40 };
+    const width = 1400;
+    const height = 1000;
+    const margin = { top: 20, right: 10, bottom: 20, left: 10};
 
     const svg = d3.select("#chart")
       .append("svg")
@@ -147,8 +148,8 @@
             return function (t) {
               const subLength = t * totalLength;
               const trailPath = pathNode.getPointAtLength
-                ? Array.from({ length: 30 }, (_, j) => {
-                    const l = subLength - j * 4;
+                ? Array.from({ length: 80 }, (_, j) => {
+                    const l = subLength - j * 10;
                     if (l < 0) return null;
                     const pt = pathNode.getPointAtLength(l);
                     return [pt.x, pt.y];
